@@ -1,81 +1,84 @@
+// chatApi.ts
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react';
 
+// Updated Message interface to include read status
 export interface Message {
-  id: string;
-  content: string;
+  _id: string;
   senderId: string;
-  senderUsername: string;
-  senderAvatar?: string;
-  chatId: string;
-  timestamp: string;
-  edited?: boolean;
-}
-
-export interface Chat {
-  id: string;
-  name: string;
-  description?: string;
-  avatar?: string;
-  type: 'direct' | 'group';
-  participants: string[];
-  lastMessage?: Message;
+  receiverId: string;
+  text?: string;
+  image?: string;
+  createdAt: string;
   updatedAt: string;
+  read?: boolean; // Add this field
+  readAt?: string; // Add this field
 }
 
+// User interface for sidebar (matching your user model)
+export interface User {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  // Add other user fields as needed
+}
+
+// Send message request - matches backend expectations
 export interface SendMessageRequest {
-  chatId: string;
-  content: string;
+  text?: string;
+  image?: string;
+}
+
+// Get messages request (handled via route params)
+export interface GetMessagesRequest {
+  receiverId: string;
 }
 
 export const chatApi = createApi({
   reducerPath: 'chatApi',
   baseQuery: fetchBaseQuery({
-    baseUrl: '/api/chat',
+    baseUrl: 'http://localhost:8000/messages', // Updated to match your route mounting
     prepareHeaders: (headers, { getState }) => {
-      const token = (getState() as any).auth.token;
+      const token = (getState() as any).auth?.token;
       if (token) {
         headers.set('authorization', `Bearer ${token}`);
       }
       return headers;
     },
   }),
-  tagTypes: ['Chat', 'Message'],
+  tagTypes: ['Messages', 'Users'],
   endpoints: (builder) => ({
-    getChats: builder.query<Chat[], void>({
-      query: () => '/chats',
-      providesTags: ['Chat'],
+    // Get users for sidebar (replaces getChats)
+    getUsersForSidebar: builder.query<User[], void>({
+      query: () => '/users',
+      providesTags: ['Users'],
     }),
+    
+    // Get messages between current user and specific receiver
     getMessages: builder.query<Message[], string>({
-      query: (chatId) => `/chats/${chatId}/messages`,
-      providesTags: (_result, _error, chatId) => [
-        { type: 'Message', id: chatId },
+      query: (receiverId) => `/${receiverId}`,
+      providesTags: (_result, _error, receiverId) => [
+        { type: 'Messages', id: receiverId },
       ],
     }),
-    sendMessage: builder.mutation<Message, SendMessageRequest>({
-      query: ({ chatId, content }) => ({
-        url: `/chats/${chatId}/messages`,
+    
+    // Send message to specific receiver
+    sendMessage: builder.mutation<Message, { receiverId: string; messageData: SendMessageRequest }>({
+      query: ({ receiverId, messageData }) => ({
+        url: `/send/${receiverId}`,
         method: 'POST',
-        body: { content },
+        body: messageData,
       }),
-      invalidatesTags: (_result, _error, { chatId }) => [
-        { type: 'Message', id: chatId },
-        'Chat',
+      invalidatesTags: (_result, _error, { receiverId }) => [
+        { type: 'Messages', id: receiverId },
+        'Users',
       ],
-    }),
-    createChat: builder.mutation<Chat, { name: string; participants: string[] }>({
-      query: (chatData) => ({
-        url: '/chats',
-        method: 'POST',
-        body: chatData,
-      }),
-      invalidatesTags: ['Chat'],
     }),
   }),
 });
 
 export const {
-  useGetChatsQuery,
+  useGetUsersForSidebarQuery,
   useGetMessagesQuery,
   useSendMessageMutation,
-  useCreateChatMutation,
 } = chatApi;
