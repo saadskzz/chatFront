@@ -175,12 +175,7 @@ const LoginForm = () => {
                   </Link>
                 </p>
                 
-                {/* {process.env.NODE_ENV === 'development' && (
-                  <div className="text-xs text-muted-foreground p-2 bg-muted/50 rounded">
-                    <p>API: {process.env.REACT_APP_API_URL || 'http://localhost:8000'}</p>
-                    <p>Form Valid: {isValid ? '✅' : '❌'}</p>
-                  </div>
-                )} */}
+                
               </div>
             </CardFooter>
           </form>

@@ -47,7 +47,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
   useEffect(() => {
     if (!isAuthenticated || !token) {
-      // Disconnect if not authenticated
+      
       if (socketRef.current) {
         socketRef.current.disconnect();
         socketRef.current = null;
@@ -61,7 +61,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     console.log('🔌 Auth token:', token);
     console.log('🔌 Is authenticated:', isAuthenticated);
     
-    // Create socket connection
+    
     socketRef.current = io('http://localhost:8000', {
       auth: { token },
       transports: ['websocket', 'polling'],
@@ -75,70 +75,70 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
 
     const socket = socketRef.current;
 
-    // Connection events
+    
     socket.on('connect', () => {
-      console.log('✅ Socket connected:', socket.id);
-      console.log('✅ Socket auth token:', token);
-      console.log('✅ Current user:', store.getState().auth?.user);
+      console.log(' Socket connected:', socket.id);
+      console.log(' Socket auth token:', token);
+      console.log(' Current user:', store.getState().auth?.user);
       setIsConnected(true);
       reconnectAttempts.current = 0;
     });
 
     socket.on('disconnect', (reason) => {
-      console.log('❌ Socket disconnected:', reason);
+      console.log(' Socket disconnected:', reason);
       setIsConnected(false);
     });
 
     socket.on('connect_error', (error) => {
-      console.error('🔌 Socket connection error:', error.message);
+      console.error(' Socket connection error:', error.message);
       reconnectAttempts.current++;
       
       if (reconnectAttempts.current >= maxReconnectAttempts) {
-        console.error('💥 Max reconnection attempts reached');
+        console.error(' Max reconnection attempts reached');
       }
     });
 
-    // Message events
+    
     socket.on('newPrivateMessage', (newMessage: Message) => {
-      console.log('📨 New message received:', newMessage);
-      console.log('📨 Current user ID:', store.getState().auth?.user?._id);
-      console.log('📨 Message sender ID:', newMessage.senderId);
-      console.log('📨 Message receiver ID:', newMessage.receiverId);
+      console.log(' New message received:', newMessage);
+      console.log(' Current user ID:', store.getState().auth?.user?._id);
+      console.log(' Message sender ID:', newMessage.senderId);
+      console.log(' Message receiver ID:', newMessage.receiverId);
       
-      // Determine the chat partner ID for storing the message
-      // If I'm the receiver, store under sender's ID (they are my chat partner)
-      // If I'm the sender, store under receiver's ID (they are my chat partner)
+      
+      
+      
       const currentUserId = store.getState().auth?.user?._id;
       const chatPartnerId = newMessage.senderId === currentUserId ? newMessage.receiverId : newMessage.senderId;
       
-      console.log('📨 Chat partner ID for storage:', chatPartnerId);
+      console.log(' Chat partner ID for storage:', chatPartnerId);
       
-      // Add to Redux store for optimistic update
-      console.log('📨 Dispatching addMessage action...');
+      
+      console.log(' Dispatching addMessage action...');
       dispatch(addMessage({ 
         receiverId: chatPartnerId, 
         message: newMessage 
       }));
       
-      console.log('📨 Redux state after adding message:', store.getState().chat.messages);
-      console.log('📨 Messages for chat partner:', store.getState().chat.messages[chatPartnerId]);
+      console.log(' Redux state after adding message:', store.getState().chat.messages);
+      console.log(' Messages for chat partner:', store.getState().chat.messages[chatPartnerId]);
     });
 
-    // Handle message sent confirmation (replace optimistic message)
+    
     socket.on('messageSent', (sentMessage: Message) => {
-      console.log('✅ Message sent confirmation:', sentMessage);
+      console.log(' Message sent confirmation:', sentMessage);
       
-      // Update the optimistic message with the real message data
+      
       dispatch(updateMessage({
         receiverId: sentMessage.receiverId,
-        messageId: `temp_${sentMessage.createdAt}`, // Match the optimistic message ID
+        messageId: `temp_${sentMessage.createdAt}`, 
         updates: sentMessage
       }));
     });
 
-    // Typing events
+    
     socket.on('userStartedTyping', ({ senderId, senderName, receiverId }) => {
-      console.log(`⌨️ ${senderName} started typing`);
+      console.log(` ${senderName} started typing`);
       dispatch(addTypingUser({ 
         userId: senderId, 
         username: senderName 
@@ -146,18 +146,18 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
     });
 
     socket.on('userStoppedTyping', ({ senderId }) => {
-      console.log(`⏹️ User stopped typing: ${senderId}`);
+      console.log(` User stopped typing: ${senderId}`);
       dispatch(removeTypingUser(senderId));
     });
 
-    // Online status events
+    
     socket.on('userOnline', ({ userId, user }) => {
-      console.log(`🟢 User online: ${user.firstName} ${user.lastName}`);
+      console.log(` User online: ${user.firstName} ${user.lastName}`);
       dispatch(addOnlineUser(userId));
     });
 
     socket.on('userOffline', ({ userId }) => {
-      console.log(`🔴 User offline: ${userId}`);
+      console.log(` User offline: ${userId}`);
       dispatch(removeOnlineUser(userId));
     });
 
@@ -166,7 +166,7 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       dispatch(setOnlineUsers(onlineUsersList.map(u => u._id)));
     });
 
-    // User status events
+    
     socket.on('userStatus', ({ userId, isOnline }) => {
       if (isOnline) {
         dispatch(addOnlineUser(userId));
@@ -175,51 +175,51 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       }
     });
 
-    // Error handling
+    
     socket.on('messageError', ({ error, details }) => {
-      console.error('💥 Message error:', error, details);
-      // You could dispatch an error action here
+      console.error(' Message error:', error, details);
+      
     });
 
     socket.on('connectionError', ({ error }) => {
-      console.error('🔌 Connection error:', error);
+      console.error(' Connection error:', error);
     });
 
-    // Test event to verify socket is working
+    
     socket.on('test', (data) => {
-      console.log('🧪 Test event received:', data);
+      console.log(' Test event received:', data);
     });
 
-    // Log all socket events for debugging
+    
     const originalEmit = socket.emit;
     socket.emit = function(event, ...args) {
-      console.log('📤 Socket emit:', event, args);
+      console.log(' Socket emit:', event, args);
       return originalEmit.call(this, event, ...args);
     };
 
-    // Cleanup on unmount
+    
     return () => {
       if (socket) {
         socket.disconnect();
-        console.log('🔌 Socket disconnected on cleanup');
+        console.log(' Socket disconnected on cleanup');
       }
     };
   }, [token, isAuthenticated, dispatch]);
 
-  // Socket action helpers
+  
   const sendMessage = (data: { receiverId: string; text?: string; image?: string }) => {
     if (!socketRef.current || !isConnected) {
-      console.warn('⚠️ Cannot send message: Socket not connected');
+      console.warn(' Cannot send message: Socket not connected');
       return;
     }
     
-    // Get current user ID from Redux store
+    
     const currentUserId = store.getState().auth?.user?._id;
     
-    // Create optimistic message for immediate UI update
+    
     const optimisticMessage: Message = {
-      _id: `temp_${Date.now()}`, // Temporary ID
-      senderId: currentUserId || '', // Current user's ID
+      _id: `temp_${Date.now()}`, 
+      senderId: currentUserId || '', 
       receiverId: data.receiverId,
       text: data.text,
       image: data.image,
@@ -227,14 +227,14 @@ export const SocketProvider: React.FC<SocketProviderProps> = ({ children }) => {
       updatedAt: new Date().toISOString(),
     };
     
-    // Add optimistic message to Redux store
-    // Store under receiverId (the chat partner we're sending to)
-    console.log('📤 Adding optimistic message to Redux...');
+    
+    
+    console.log(' Adding optimistic message to Redux...');
     dispatch(addMessage({ 
       receiverId: data.receiverId, 
       message: optimisticMessage 
     }));
-    console.log('📤 Redux state after optimistic message:', store.getState().chat.messages[data.receiverId]);
+    console.log(' Redux state after optimistic message:', store.getState().chat.messages[data.receiverId]);
     
     socketRef.current.emit('sendPrivateMessage', data);
   };
